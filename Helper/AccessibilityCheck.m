@@ -140,9 +140,16 @@
         DDLogInfo("Accessibility Check - Accessibility Access Disabled");
         
         /// Workaround for macOS bug
-        ///     If there's still and old version of the helper in System Settings, the user won't be able to trust the new helper. So we remove the old helper from System Settings and add the new one again.
-
-        [HelperServices launchHelperInstanceWithMessage:@"forceUpdateAccessibilitySettings"];
+        ///     If there's still an old version of the helper in System Settings, the user won't be able to trust the new helper. So we remove the old helper from System Settings and add the new one again.
+        ///     On macOS 27.3+, "Device Control and Data Access" (formerly Accessibility) was split into
+        ///     "Accessibility" (assistive tech) and "System & App Protection Override". `AXIsProcessTrustedWithOptions`
+        ///     no longer auto-adds the helper to System Settings — the user must manually add it via `+`.
+        ///     Resetting Accessibility via `tccutil` on every untrusted launch is therefore unnecessary and potentially disruptive.
+        if (@available(macOS 27.3, *)) {
+            DDLogInfo("Accessibility Check - Skipping forceUpdateAccessibilitySettings on macOS 27.3+ (System & App Protection Override requires manual user grant)");
+        } else {
+            [HelperServices launchHelperInstanceWithMessage:@"forceUpdateAccessibilitySettings"];
+        }
 
         /// Notify main app
         NSDictionary *payload = @{

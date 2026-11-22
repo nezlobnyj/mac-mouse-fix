@@ -20,14 +20,25 @@
 //#import "CaptureToasts.h" 
 #import "Mac_Mouse_Fix-Swift.h"
 #import "Localization.h"
+#import "Locator.h"
+#import "Links.h"
 
 @interface AuthorizeAccessibilityView ()
 
+@property (weak) IBOutlet NSTextField *titleLabel;
+@property (weak) IBOutlet NSTextField *subtitleLabel;
+@property (weak) IBOutlet NSTextField *step1NumberLabel;
 @property (weak) IBOutlet Hyperlink *openSettingsLink;
+@property (weak) IBOutlet NSTextField *step2NumberLabel;
+@property (weak) IBOutlet NSTextField *step2Label;
+@property (weak) IBOutlet NSButton *cancelButton;
 
 @end
 
-@implementation AuthorizeAccessibilityView
+@implementation AuthorizeAccessibilityView {
+    NSButton *_copyPathButton;
+    NSUInteger _copyFeedbackGeneration;
+}
 
 AuthorizeAccessibilityView *_accViewController;
 
@@ -63,7 +74,11 @@ AuthorizeAccessibilityView *_accViewController;
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    if (@available(macOS 13.0, *)) { } else {
+    if (@available(macOS 27.3, *)) {
+        [self setupForSystemProtectionOverride];
+    } else if (@available(macOS 13.0, *)) {
+        /// Default XIB layout targets macOS 13.0–27.2
+    } else {
         self.openSettingsLink.stringValue = MFLocalizedString(
             @"accessibility.settings-link.pre-ventura",
             @"Will be used in a context like this: \n"
@@ -73,6 +88,163 @@ AuthorizeAccessibilityView *_accViewController;
             "Background info: 'System Preferences' were renamed to 'System Settings' in macOS Ventura. The translation for Ventura and later is defined by 46z-Nd-nh4.title and other entries in AuthorizeAccessibilityView. This here is the string for earlier versions."
         );
     }
+}
+
+/// Rebuilds the onboarding steps for macOS 27.3+, where Apple split "Device Control and Data Access"
+/// (formerly Accessibility) into "Accessibility" (entitlement-gated assistive tech) and
+/// "System & App Protection Override" (which no longer auto-populates from AXIsProcessTrustedWithOptions
+/// and no longer supports drag-and-drop into the list).
+- (void)setupForSystemProtectionOverride {
+    
+    /// Update title & subtitle
+    self.titleLabel.stringValue = MFLocalizedString(
+        @"accessibility.override.title",
+        @"Title of the permission sheet on macOS 27.3+, where the Accessibility permission for non-assistive utilities was moved to 'System & App Protection Override'."
+    );
+    self.subtitleLabel.stringValue = MFLocalizedString(
+        @"accessibility.override.subtitle",
+        @"Subtitle of the permission sheet on macOS 27.3+. Recommend splitting into two lines of roughly the same length for a nice visual layout."
+    );
+    
+    /// Grab the existing localized openSettingsLink before detaching the legacy 2-step views
+    Hyperlink *settingsLink = self.openSettingsLink;
+    [self.step1NumberLabel removeFromSuperview];
+    [settingsLink removeFromSuperview];
+    [self.step2NumberLabel removeFromSuperview];
+    [self.step2Label removeFromSuperview];
+    
+    /// Helper to build a numbered step row
+    NSStackView *(^makeStepRow)(NSString *number, NSView *contentView) = ^NSStackView *(NSString *number, NSView *contentView) {
+        NSTextField *numLabel = [NSTextField labelWithString:number];
+        numLabel.font = [NSFont systemFontOfSize:NSFont.systemFontSize];
+        numLabel.textColor = NSColor.labelColor;
+        numLabel.alignment = NSTextAlignmentRight;
+        [numLabel setContentHuggingPriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
+        [numLabel setContentCompressionResistancePriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
+        [numLabel.widthAnchor constraintEqualToConstant:16.0].active = YES;
+        
+        NSStackView *row = [NSStackView stackViewWithViews:@[numLabel, contentView]];
+        row.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+        row.alignment = NSLayoutAttributeFirstBaseline;
+        row.spacing = 6.0;
+        return row;
+    };
+    
+    NSTextField *(^makeStepLabel)(NSString *text) = ^NSTextField *(NSString *text) {
+        NSTextField *label = [NSTextField labelWithString:text];
+        label.font = [NSFont systemFontOfSize:NSFont.systemFontSize];
+        label.textColor = NSColor.labelColor;
+        label.lineBreakMode = NSLineBreakByWordWrapping;
+        return label;
+    };
+    
+    /// Step 1: Open 'Privacy & Security' Settings (reuses existing localized Hyperlink)
+    settingsLink.alignment = NSTextAlignmentLeft;
+    NSStackView *step1Row = makeStepRow(@"1.", settingsLink);
+    
+    /// Step 2: Select 'System & App Protection Override' and click '+'
+    NSTextField *step2Text = makeStepLabel(MFLocalizedString(
+        @"accessibility.override.step2",
+        @"Step 2 on macOS 27.3+ permission sheet: instruct user to open System & App Protection Override and click the '+' button."
+    ));
+    NSStackView *step2Row = makeStepRow(@"2.", step2Text);
+    
+    /// Step 3: Press ⇧⌘G, paste the helper path, and add 'Mac Mouse Fix Helper'
+    NSTextField *step3Text = makeStepLabel(MFLocalizedString(
+        @"accessibility.override.step3",
+        @"Step 3 on macOS 27.3+ permission sheet: instruct user to press Shift-Command-G in the file picker, paste the helper path, and select Mac Mouse Fix Helper."
+    ));
+    NSStackView *step3Row = makeStepRow(@"3.", step3Text);
+    
+    /// Action buttons under Step 3: Copy Helper Path & Reveal in Finder
+    NSString *copyTitle = MFLocalizedString(
+        @"accessibility.override.copy-path",
+        @"Button title on macOS 27.3+ permission sheet that copies the path of 'Mac Mouse Fix Helper.app' to the clipboard."
+    );
+    _copyPathButton = [NSButton buttonWithTitle:copyTitle target:self action:@selector(copyHelperPathClicked:)];
+    _copyPathButton.controlSize = NSControlSizeSmall;
+    _copyPathButton.font = [NSFont systemFontOfSize:[NSFont systemFontSizeForControlSize:NSControlSizeSmall]];
+    
+    NSString *revealTitle = MFLocalizedString(
+        @"accessibility.override.reveal-helper",
+        @"Button title on macOS 27.3+ permission sheet that reveals 'Mac Mouse Fix Helper.app' in Finder."
+    );
+    NSButton *revealButton = [NSButton buttonWithTitle:revealTitle target:self action:@selector(revealHelperClicked:)];
+    revealButton.controlSize = NSControlSizeSmall;
+    revealButton.font = [NSFont systemFontOfSize:[NSFont systemFontSizeForControlSize:NSControlSizeSmall]];
+    
+    NSStackView *helperActionsRow = [NSStackView stackViewWithViews:@[_copyPathButton, revealButton]];
+    helperActionsRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    helperActionsRow.alignment = NSLayoutAttributeCenterY;
+    helperActionsRow.spacing = 8.0;
+    helperActionsRow.edgeInsets = NSEdgeInsetsMake(2.0, 22.0, 4.0, 0.0);
+    
+    /// Step 4: Choose 'Override System Protections' and confirm the prompts
+    NSTextField *step4Text = makeStepLabel(MFLocalizedString(
+        @"accessibility.override.step4",
+        @"Step 4 on macOS 27.3+ permission sheet: instruct user to choose 'Override System Protections' and confirm the macOS prompts."
+    ));
+    NSStackView *step4Row = makeStepRow(@"4.", step4Text);
+    
+    /// Assemble vertical steps stack
+    NSStackView *stepsStack = [NSStackView stackViewWithViews:@[
+        step1Row,
+        step2Row,
+        step3Row,
+        helperActionsRow,
+        step4Row,
+    ]];
+    stepsStack.orientation = NSUserInterfaceLayoutOrientationVertical;
+    stepsStack.alignment = NSLayoutAttributeLeading;
+    stepsStack.spacing = 7.0;
+    stepsStack.translatesAutoresizingMaskIntoConstraints = NO;
+    
+    [self.view addSubview:stepsStack];
+    
+    [NSLayoutConstraint activateConstraints:@[
+        [stepsStack.topAnchor constraintEqualToAnchor:self.subtitleLabel.bottomAnchor constant:20.0],
+        [self.cancelButton.topAnchor constraintEqualToAnchor:stepsStack.bottomAnchor constant:24.0],
+        [stepsStack.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [stepsStack.leadingAnchor constraintGreaterThanOrEqualToAnchor:self.view.leadingAnchor constant:30.0],
+        [stepsStack.trailingAnchor constraintLessThanOrEqualToAnchor:self.view.trailingAnchor constant:-30.0],
+    ]];
+}
+
+- (void)copyHelperPathClicked:(NSButton *)sender {
+    NSString *helperPath = Locator.helperBundle.bundlePath;
+    if (helperPath.length == 0) {
+        DDLogError("AuthorizeAccessibilityView: Failed to resolve helper bundle path for clipboard copy");
+        return;
+    }
+    
+    NSPasteboard *pb = NSPasteboard.generalPasteboard;
+    [pb clearContents];
+    [pb setString:helperPath forType:NSPasteboardTypeString];
+    
+    NSUInteger generation = ++_copyFeedbackGeneration;
+    _copyPathButton.title = MFLocalizedString(
+        @"accessibility.override.copied",
+        @"Temporary confirmation text shown on the 'Copy Helper Path' button after copying the path."
+    );
+    
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf || strongSelf->_copyFeedbackGeneration != generation) return;
+        strongSelf->_copyPathButton.title = MFLocalizedString(
+            @"accessibility.override.copy-path",
+            @"Button title on macOS 27.3+ permission sheet that copies the path of 'Mac Mouse Fix Helper.app' to the clipboard."
+        );
+    });
+}
+
+- (void)revealHelperClicked:(NSButton *)sender {
+    NSURL *helperURL = Locator.helperBundle.bundleURL;
+    if (!helperURL) {
+        DDLogError("AuthorizeAccessibilityView: Failed to resolve helper bundle URL for Finder reveal");
+        return;
+    }
+    [NSWorkspace.sharedWorkspace activateFileViewerSelectingURLs:@[helperURL]];
 }
 
 - (IBAction)AuthorizeButton:(NSButton *)sender {
@@ -85,8 +257,10 @@ AuthorizeAccessibilityView *_accViewController;
     
     /// Open privacy prefpane
     
-    NSString* urlString = @"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility";
-    [NSWorkspace.sharedWorkspace openURL:[NSURL URLWithString:urlString]];
+    NSString *urlString = [Links link:kMFLinkID_MacOSSettingsPrivacyAndSecurity];
+    if (urlString) {
+        [NSWorkspace.sharedWorkspace openURL:[NSURL URLWithString:urlString]];
+    }
 }
 - (IBAction)cancelButton:(NSButton *)sender {
     [HelperServices enableHelperAsUserAgent:NO onComplete:nil];

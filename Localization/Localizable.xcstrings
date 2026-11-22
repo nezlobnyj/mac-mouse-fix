@@ -1,6 +1,94 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "accessibility.override.copied" : {
+      "comment" : "Temporary confirmation text shown on the 'Copy Helper Path' button after copying the path.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied!"
+          }
+        }
+      }
+    },
+    "accessibility.override.copy-path" : {
+      "comment" : "Button title on macOS 27.3+ permission sheet that copies the path of 'Mac Mouse Fix Helper.app' to the clipboard.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy Helper Path"
+          }
+        }
+      }
+    },
+    "accessibility.override.reveal-helper" : {
+      "comment" : "Button title on macOS 27.3+ permission sheet that reveals 'Mac Mouse Fix Helper.app' in Finder.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reveal in Finder"
+          }
+        }
+      }
+    },
+    "accessibility.override.step2" : {
+      "comment" : "Step 2 on macOS 27.3+ permission sheet: instruct user to open System & App Protection Override and click the '+' button.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select 'System & App Protection Override' and click '+'"
+          }
+        }
+      }
+    },
+    "accessibility.override.step3" : {
+      "comment" : "Step 3 on macOS 27.3+ permission sheet: instruct user to press Shift-Command-G in the file picker, paste the helper path, and select Mac Mouse Fix Helper.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press ⇧⌘G, paste the helper path, and add 'Mac Mouse Fix Helper'"
+          }
+        }
+      }
+    },
+    "accessibility.override.step4" : {
+      "comment" : "Step 4 on macOS 27.3+ permission sheet: instruct user to choose 'Override System Protections' and confirm the macOS prompts.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose 'Override System Protections' and confirm the prompts"
+          }
+        }
+      }
+    },
+    "accessibility.override.subtitle" : {
+      "comment" : "Subtitle of the permission sheet on macOS 27.3+. Recommend splitting into two lines of roughly the same length for a nice visual layout.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System & App Protection Override allows Mac Mouse Fix to\nintercept signals from your mouse and keyboard"
+          }
+        }
+      }
+    },
+    "accessibility.override.title" : {
+      "comment" : "Title of the permission sheet on macOS 27.3+, where the Accessibility permission for non-assistive utilities was moved to 'System & App Protection Override'.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grant System & App Protection Override to Mac Mouse Fix"
+          }
+        }
+      }
+    },
     "accessibility.settings-link.pre-ventura" : {
       "comment" : "Will be used in a context like this: \n   1. Open 'Security & Privacy' Preferences\n   2. Switch on 'Mac Mouse Fix Helper'\n\nBackground info: 'System Preferences' were renamed to 'System Settings' in macOS Ventura. The translation for Ventura and later is defined by 46z-Nd-nh4.title and other entries in AuthorizeAccessibilityView. This here is the string for earlier versions.",
       "localizations" : {
