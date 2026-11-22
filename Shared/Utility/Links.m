@@ -44,9 +44,18 @@
         }
         xxx(kMFLinkID_MacOSSettingsPrivacyAndSecurity) {
             /// Notes:
-            /// - This is used on the accessibility sheet.
-            /// - This link works on pre-Ventura *System Preferences* as well as Ventura-and-later *System Settings*. Evidence that this works pre-Ventura: This link shows up on a GitHub Gist which documents pre-Ventura System Preferences urls: https://gist.github.com/rmcdongit/f66ff91e0dad78d4d6346a75ded4b751
-            result = @"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility";
+            /// - This is used on the accessibility / System & App Protection Override sheet.
+            /// - On macOS 27.3+, Apple split "Device Control and Data Access" (formerly Accessibility) into
+            ///   "Accessibility" (entitlement-gated assistive technologies) and "System & App Protection Override".
+            ///   The legacy `Privacy_Accessibility` anchor no longer opens "System & App Protection Override",
+            ///   so we open the top-level Privacy & Security pane directly.
+            /// - On earlier macOS versions, `Privacy_Accessibility` works on both pre-Ventura *System Preferences*
+            ///   and Ventura-and-later *System Settings* (ref: https://gist.github.com/rmcdongit/f66ff91e0dad78d4d6346a75ded4b751).
+            if (@available(macOS 27.3, *)) {
+                result = @"x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension";
+            } else {
+                result = @"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility";
+            }
         }
         
         xxx(kMFLinkID_MailToNoah) {

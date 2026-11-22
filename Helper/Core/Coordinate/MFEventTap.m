@@ -291,6 +291,10 @@ NSString *CGEventMaskDescription(CGEventMask eventMask) {
             if (!_cgTapData[i].tap) {
 
                 CFMachPortRef eventTap = CGEventTapCreate(kTapLocation_Listening, kCGTailAppendEventTap, _cgTapData[i].options, _cgTapData[i].mask, sharedCGTapCallback, /*userInfo*/(void *)i);
+                if (!eventTap) {
+                    DDLogError("MFEventTap: Failed to create event tap '%{public}@' (missing System & App Protection Override / Accessibility permission?)", CGTapIDDescription(i));
+                    continue;
+                }
                 CFRunLoopSourceRef runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, /*order*/0);
                 CFRunLoopAddSource(eventTapRunLoop(), runLoopSource, kCFRunLoopCommonModes);
 

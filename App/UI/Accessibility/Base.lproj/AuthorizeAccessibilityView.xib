@@ -8,7 +8,13 @@
     <objects>
         <customObject id="-2" userLabel="File's Owner" customClass="AuthorizeAccessibilityView">
             <connections>
+                <outlet property="cancelButton" destination="sly-jt-EUp" id="m27-Cn-btn"/>
                 <outlet property="openSettingsLink" destination="xUD-oJ-hdN" id="E5T-zj-scq"/>
+                <outlet property="step1NumberLabel" destination="6N2-6y-5iB" id="m27-S1-num"/>
+                <outlet property="step2Label" destination="9kK-bF-abK" id="m27-S2-lbl"/>
+                <outlet property="step2NumberLabel" destination="8eQ-d3-USu" id="m27-S2-num"/>
+                <outlet property="subtitleLabel" destination="ehG-P7-Fzq" id="m27-Su-btl"/>
+                <outlet property="titleLabel" destination="3VE-AW-Zcd" id="m27-Ti-tle"/>
                 <outlet property="view" destination="1T3-8f-fdJ" id="A2e-7M-lzh"/>
             </connections>
         </customObject>
